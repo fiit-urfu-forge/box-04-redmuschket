@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}CertGuard — главная{% endblock %}
+{% block content %}
+<h1 class="mb-4">Панель управления</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-bg-light"><div class="card-body">
+            <h5 class="card-title">Компании</h5>
+            <p class="display-6 mb-0">{{ companies_count }}</p>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-light"><div class="card-body">
+            <h5 class="card-title">Сертификаты</h5>
+            <p class="display-6 mb-0">{{ certificates_count }}</p>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-light"><div class="card-body">
+            <h5 class="card-title">Проверок</h5>
+            <p class="display-6 mb-0">{{ verifications_count }}</p>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card {{ 'text-bg-success' if model_ready else 'text-bg-warning' }}">
+            <div class="card-body">
+            <h5 class="card-title">Модель</h5>
+            <p class="mb-0">
+                {{ 'Готова' if model_ready else 'Не обучена' }}<br>
+                <small>в индексе: {{ model_indexed }}</small>
+            </p>
+        </div></div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    Порог косинусной близости для срабатывания тревоги:
+    <strong>{{ '%.2f'|format(threshold) }}</strong>
+</div>
+
+<div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="/ui/companies">Зарегистрировать компанию</a>
+    <a class="btn btn-primary" href="/ui/certificates">Выпустить сертификат</a>
+    <a class="btn btn-danger" href="/ui/verify">Проверить документ</a>
+</div>
+{% endblock %}

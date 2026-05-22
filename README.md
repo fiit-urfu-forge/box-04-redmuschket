@@ -1,1 +1,140 @@
-# sandbox
+# CertGuard — система проверки подлинности сертификатов
+
+Веб-сервис, который обнаруживает поддельные сертификаты. Компании загружают
+оригинальные PDF-сертификаты; система извлекает текст, считает **TF-IDF**
+вектор и сохраняет его. При проверке подозрительного PDF выполняется поиск
+ближайшего соседа (косинусная близость), и если сходство превышает порог —
+владельцу оригинала отправляется уведомление.
+
+
+---
+
+## Технологический стек
+
+| Назначение            | Технология                                  |
+|-----------------------|----------------------------------------------|
+| Язык                  | Python 3.13 (контейнер), 3.12+ совместим      |
+| Web-фреймворк          | FastAPI                                      |
+| База данных            | PostgreSQL 14+ (SQLite — только автотесты)    |
+| ML                     | scikit-learn (`TfidfVectorizer`, `NearestNeighbors`) |
+| Извлечение текста PDF  | pdfplumber                                    |
+| Миграции               | Alembic                                       |
+| Контейнеризация        | Docker + docker-compose                       |
+| Тесты                  | pytest                                        |
+| Шаблоны / UI           | Jinja2 + Bootstrap 5 + минимальный vanilla JS |
+
+Нейросетевые эмбеддинги **не используются** — это прямой запрет ТЗ.
+
+---
+
+## Быстрый старт (Docker)
+
+```bash
+cp .env.example .env          # при необходимости отредактируйте
+docker compose up --build
+```
+
+- Веб-интерфейс: <http://localhost:8000/>
+- Swagger UI (API): <http://localhost:8000/docs>
+
+При старте контейнер автоматически применяет миграции (`alembic upgrade head`).
+
+## Запуск без Docker (локально)
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Поднимите PostgreSQL и пропишите DATABASE_URL, например:
+export DATABASE_URL="postgresql+psycopg2://certguard:certguard@localhost:5432/certguard"
+
+alembic upgrade head                       # создать схему
+uvicorn app.main:app --reload              # запустить сервер
+```
+
+## Запуск тестов
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
+Тесты используют изолированную SQLite-базу и временные каталоги — отдельная
+БД не требуется.
+
+---
+
+## Структура проекта
+
+```
+app/
+  config.py          конфигурация (порог близости, max_features и пр.)
+  database.py        подключение к БД, пул соединений с таймаутами
+  models.py          ORM-модели: Company, Certificate, VerificationRequest,
+                     Alert, Admin, AdminNotification
+  schemas.py         Pydantic-схемы запросов/ответов
+  pdf_utils.py       валидация PDF, извлечение текста, SHA-256, атомарная запись
+  ml.py              TF-IDF + NearestNeighbors, обучение и поиск
+  crud.py            бизнес-логика и валидация (точные коды/тексты ошибок)
+  email_utils.py     асинхронная отправка уведомлений с retry
+  main.py            сборка FastAPI-приложения и обработчики ошибок
+  routers/           эндпоинты: companies, certificates, verification, admin, web
+  templates/         Jinja2-шаблоны
+  static/            CSS и JS
+alembic/             миграции БД
+tests/               pytest-тесты
+```
+
+---
+
+## Основные эндпоинты API
+
+| Метод и путь                             | Назначение                               |
+|------------------------------------------|------------------------------------------|
+| `POST /companies`                        | Регистрация компании                     |
+| `GET /companies` · `GET /companies/{id}` | Чтение компаний                          |
+| `PUT /companies/{id}`                    | Изменение названия / email               |
+| `DELETE /companies/{id}`                 | Логическое удаление (`is_active=false`)  |
+| `POST /companies/{id}/reactivate`        | Повторная активация                      |
+| `POST /certificates`                     | Выпуск сертификата (multipart, PDF)      |
+| `GET /certificates/{id}/download`        | Скачать оригинал PDF                     |
+| `PUT /certificates/{id}`                 | Обновление (с ограничениями ТЗ)          |
+| `POST /certificates/{id}/revoke`         | Отзыв сертификата                        |
+| `POST /verify`                           | Проверка подозрительного PDF             |
+| `GET /verifications`                     | История проверок                        |
+| `POST /models/retrain`                   | Ручное переобучение модели               |
+| `GET /models/status`                     | Состояние модели                         |
+| `GET /admin/notifications`               | Системные уведомления администратора     |
+
+---
+
+## Как работает проверка
+
+1. Файл проверяется: размер ≤ 10 МБ, сигнатура `%PDF`, читаемость, наличие текста.
+2. Считается SHA-256; если такой файл уже проверялся — `409 Conflict`.
+3. Из PDF извлекается текст, `TfidfVectorizer` строит вектор.
+4. `NearestNeighbors` (метрика `cosine`) находит ближайший сертификат.
+5. Если близость ≥ `SIMILARITY_THRESHOLD` (по умолчанию `0.7`) — создаётся
+   `VerificationRequest` со статусом `completed`, формируется `Alert`,
+   уведомление отправляется фоновой задачей.
+6. Иначе — статус `no_match`, уведомление не создаётся.
+
+Модель переобучается автоматически при выпуске и отзыве сертификата, а также
+вручную через `POST /models/retrain`. Файлы моделей хранятся в `./models/*.pkl`.
+Если они повреждены или отсутствуют, а сертификаты есть — `verify` отвечает
+`503` (деградированный режим), при этом выпуск сертификатов продолжает работать.
+
+---
+
+## Конфигурация
+
+Все параметры — в переменных окружения (см. [`.env.example`](.env.example)).
+Ключевые:
+
+- `SIMILARITY_THRESHOLD` — порог косинусной близости (вынесен в конфиг по ТЗ);
+- `TFIDF_MAX_FEATURES` — размер словаря TF-IDF (по умолчанию `5000`);
+- `MAX_PDF_SIZE_MB` — лимит размера загружаемого PDF (`10`);
+- `SMTP_*` — параметры почты. Если `SMTP_HOST` пуст — режим симуляции
+  (письмо логируется, `Alert` помечается `sent`).
+
+---

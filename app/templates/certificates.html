@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Сертификаты — CertGuard{% endblock %}
+{% block content %}
+<h1 class="mb-4">Сертификаты</h1>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">Выпуск сертификата</div>
+    <div class="card-body">
+        <form method="post" action="/ui/certificates" enctype="multipart/form-data"
+              class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Компания</label>
+                <select name="company_id" class="form-select" required>
+                    <option value="">— выберите —</option>
+                    {% for c in companies if c.is_active %}
+                        <option value="{{ c.id }}">{{ c.id }} — {{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Номер сертификата</label>
+                <input type="text" name="certificate_number" class="form-control"
+                       required maxlength="36">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Дата выдачи</label>
+                <input type="date" name="issue_date" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">ФИО получателя (необязательно)</label>
+                <input type="text" name="recipient_name" class="form-control" maxlength="255">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">PDF-файл сертификата</label>
+                <input type="file" name="file" class="form-control" accept="application/pdf" required>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary" type="submit">Выпустить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped align-middle">
+    <thead><tr>
+        <th>ID</th><th>Компания</th><th>Номер</th><th>Получатель</th>
+        <th>Дата</th><th>Статус</th><th>Действия</th>
+    </tr></thead>
+    <tbody>
+    {% for cert in certificates %}
+        <tr>
+            <td>{{ cert.id }}</td>
+            <td>{{ cert.company_id }}</td>
+            <td>{{ cert.certificate_number }}</td>
+            <td>{{ cert.recipient_name }}</td>
+            <td>{{ cert.issue_date }}</td>
+            <td>
+                {% if cert.status == 'active' %}
+                    <span class="badge text-bg-success">active</span>
+                {% elif cert.status == 'revoked' %}
+                    <span class="badge text-bg-secondary">revoked</span>
+                {% else %}
+                    <span class="badge text-bg-danger">damaged</span>
+                {% endif %}
+            </td>
+            <td>
+                <a class="btn btn-sm btn-outline-primary"
+                   href="/certificates/{{ cert.id }}/download">Скачать</a>
+                {% if cert.status == 'active' %}
+                <form method="post" action="/ui/certificates/{{ cert.id }}/revoke"
+                      class="d-inline">
+                    <button class="btn btn-sm btn-outline-danger">Отозвать</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="7" class="text-muted text-center">Сертификатов пока нет</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

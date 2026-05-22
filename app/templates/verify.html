@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Проверка документа — CertGuard{% endblock %}
+{% block content %}
+<h1 class="mb-4">Проверка подозрительного документа</h1>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" action="/ui/verify" enctype="multipart/form-data">
+            <label class="form-label">Загрузите PDF для проверки</label>
+            <div class="input-group">
+                <input type="file" name="file" class="form-control"
+                       accept="application/pdf" required>
+                <button class="btn btn-danger" type="submit">Проверить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if result %}
+    {% if result.matched %}
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">⚠️ Обнаружена возможная подделка!</h4>
+        <p>{{ result.message }}</p>
+        <hr>
+        <p class="mb-1">Владелец оригинала: <strong>{{ result.matched_company_name }}</strong></p>
+        <p class="mb-1">Номер сертификата: <strong>{{ result.matched_certificate_number }}</strong></p>
+        <p class="mb-1">Степень сходства:
+            <strong>{{ '%.1f'|format(result.similarity_score * 100) }}%</strong></p>
+        <p class="mb-0">Запрос проверки #{{ result.request.id }},
+            уведомление #{{ result.alert_id }} поставлено в очередь.</p>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <h4 class="alert-heading">✅ Совпадений не найдено</h4>
+        <p class="mb-0">{{ result.message }}.
+            {% if result.similarity_score is not none %}
+            Максимальная близость:
+            {{ '%.1f'|format(result.similarity_score * 100) }}%
+            (порог не превышен).
+            {% endif %}
+            Запрос проверки #{{ result.request.id }}.</p>
+    </div>
+    {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: certguard
+      POSTGRES_PASSWORD: certguard
+      POSTGRES_DB: certguard
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U certguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://certguard:certguard@db:5432/certguard
+      STORAGE_DIR: ./storage
+      CERTIFICATES_DIR: ./storage/certificates
+      SUSPICIOUS_DIR: ./storage/suspicious
+      MODELS_DIR: ./models
+      LOGS_DIR: ./logs
+      SIMILARITY_THRESHOLD: "0.7"
+      TFIDF_MAX_FEATURES: "5000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage:/app/storage
+      - ./models:/app/models
+      - ./logs:/app/logs
+
+volumes:
+  pgdata:
