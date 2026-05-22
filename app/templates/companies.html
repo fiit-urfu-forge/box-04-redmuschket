@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Компании — CertGuard{% endblock %}
+{% block content %}
+<h1 class="mb-4">Компании</h1>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">Регистрация новой компании</div>
+    <div class="card-body">
+        <form method="post" action="/ui/companies" class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">Название</label>
+                <input type="text" name="name" class="form-control" required maxlength="255">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Email для уведомлений</label>
+                <input type="email" name="email" class="form-control" required maxlength="320">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" type="submit">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped align-middle">
+    <thead><tr>
+        <th>ID</th><th>Название</th><th>Email</th><th>Статус</th><th>Действия</th>
+    </tr></thead>
+    <tbody>
+    {% for c in companies %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.name }}</td>
+            <td>{{ c.email }}</td>
+            <td>
+                {% if c.is_active %}
+                    <span class="badge text-bg-success">активна</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">заблокирована</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if c.is_active %}
+                <form method="post" action="/ui/companies/{{ c.id }}/deactivate" class="d-inline">
+                    <button class="btn btn-sm btn-outline-danger">Деактивировать</button>
+                </form>
+                {% else %}
+                <form method="post" action="/ui/companies/{{ c.id }}/reactivate" class="d-inline">
+                    <button class="btn btn-sm btn-outline-success">Реактивировать</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5" class="text-muted text-center">Компаний пока нет</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

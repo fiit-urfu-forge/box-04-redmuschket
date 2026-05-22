@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}История проверок — CertGuard{% endblock %}
+{% block content %}
+<h1 class="mb-4">История проверок</h1>
+
+<table class="table table-striped align-middle">
+    <thead><tr>
+        <th>ID</th><th>Статус</th><th>Совпадение</th>
+        <th>Близость</th><th>Дата проверки</th>
+    </tr></thead>
+    <tbody>
+    {% for v in verifications %}
+        <tr>
+            <td>{{ v.id }}</td>
+            <td>
+                {% if v.status == 'completed' %}
+                    <span class="badge text-bg-danger">completed</span>
+                {% elif v.status == 'no_match' %}
+                    <span class="badge text-bg-success">no_match</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">{{ v.status }}</span>
+                {% endif %}
+            </td>
+            <td>{{ v.matched_certificate_id or '—' }}</td>
+            <td>
+                {% if v.similarity_score is not none %}
+                    {{ '%.1f'|format(v.similarity_score * 100) }}%
+                {% else %}—{% endif %}
+            </td>
+            <td>{{ v.verified_at or '—' }}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5" class="text-muted text-center">Проверок пока нет</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

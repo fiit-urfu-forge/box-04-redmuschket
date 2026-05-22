@@ -1,0 +1,19 @@
+/* CertGuard — минимальные дополнения к Bootstrap */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+main {
+    flex: 1 0 auto;
+}
+.navbar-brand {
+    font-weight: 600;
+}
+.card .display-6 {
+    font-weight: 600;
+}
+footer {
+    flex-shrink: 0;
+    border-top: 1px solid #e9ecef;
+}

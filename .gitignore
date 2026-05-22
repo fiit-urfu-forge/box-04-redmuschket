@@ -416,3 +416,26 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# --- Python / CertGuard project -------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.env
+
+# Runtime data — keep the folders, ignore their contents.
+# (`logs/` is re-included explicitly: the VS template above ignores it.)
+!logs/
+storage/certificates/*
+storage/suspicious/*
+storage/archive/*
+models/*.pkl
+logs/*.log
+!**/.gitkeep
+
+# Test artefacts
+*.sqlite3
+test_*.sqlite3
