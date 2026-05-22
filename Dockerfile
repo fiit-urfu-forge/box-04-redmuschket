@@ -16,7 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN chmod +x /app/entrypoint.sh \
+# Страховка от CRLF: убираем возможные \r из скрипта (если контекст сборки
+# был выгружен на Windows), затем делаем его исполняемым.
+RUN sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh \
     && mkdir -p storage/certificates storage/suspicious storage/archive models logs
 
 EXPOSE 8000

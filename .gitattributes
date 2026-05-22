@@ -1,0 +1,18 @@
+# Нормализуем переводы строк: всегда LF в рабочем дереве.
+# Без этого shell-скрипты, выгруженные на Windows, получают CRLF и ломают
+# shebang внутри контейнера (env: 'bash\r': No such file or directory).
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+Dockerfile      text eol=lf
+docker-compose.yml text eol=lf
+
+# Бинарные файлы не трогаем.
+*.pdf   binary
+*.pkl   binary
+*.png   binary
+*.jpg   binary
